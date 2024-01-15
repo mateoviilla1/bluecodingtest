@@ -1,11 +1,13 @@
 const express = require('express');
 const shortUrl = require('node-url-shortener');
 const mongoose = require('mongoose');
+const cron = require('node-cron');
 
 mongoose.connect('mongodb://127.0.0.1:27017/test');
 
 const Urls = mongoose.model('Urls', {
   urlName: String,
+  url: String,
   count: Number,
   title: String,
 });
@@ -56,23 +58,35 @@ const parseTitle = (body) => {
 };
 
 app.get('/title', async (req, res) => {
-  // if (!url) return res.status(400).end('Missing url query parameter');
-
-  const url = 'https://cdpt.in/MzM4OTEyMg==';
-  const dbUrl = await Urls.findOne({ urlName: url });
-  const urlText = await fetch(url)
-    .then((res) => res.text()) // parse response's body as text
-    .then((body) => parseTitle(body)) // extract <title> from body
-    .catch((e) => res.status(500).end(e)); // catch possible errors
-  console.log(urlText);
-
-  const updated = await Urls.updateOne({ urlName: url }, { title: urlText });
-
-  console.log({ updated });
-  const data = await Urls.findOne({ urlName: url });
-
   return res.send({ data });
 });
+
+cron.schedule('*/5 * * * * *', async () => {
+  console.log('running a task every minute');
+
+  try {
+    const urls = await Urls.find();
+
+    console.log(urls);
+    const promises = urls.map((url) => {
+      addTitle(url.urlName);
+    });
+
+    await Promise.all(promises);
+  } catch (error) {
+    console.log('error inserting names');
+  }
+});
+
+async function addTitle(url) {
+  const urlText = await fetch(url)
+    .then((res) => res.text())
+    .then((body) => parseTitle(body))
+    .catch((e) => console.error('error parsing'));
+
+  const updated = await Urls.updateOne({ urlName: url }, { title: urlText });
+  return { updated, url };
+}
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);

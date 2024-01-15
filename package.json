@@ -13,6 +13,7 @@
     "get-title-at-url": "^2.0.0",
     "mongodb": "^6.3.0",
     "mongoose": "^8.0.4",
+    "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "node-url-shortener": "^2.0.3"
   }
